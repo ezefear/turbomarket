@@ -1,1 +1,28 @@
-window.TurboYahoo=(()=>{let endpoint=localStorage.getItem("turbo_yahoo_api")||"https://TU-WORKER.workers.dev";function setEndpoint(url){endpoint=String(url).replace(/\/$/,"");localStorage.setItem("turbo_yahoo_api",endpoint)}async function getBars(symbol,interval="1d"){if(endpoint.includes("TU-WORKER"))throw new Error("Configura la URL de tu Cloudflare Worker en localStorage turbo_yahoo_api");const u=`${endpoint}/chart?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}`;const r=await fetch(u);const body=await r.json().catch(()=>({}));if(!r.ok)throw new Error(body.error||`API HTTP ${r.status}`);if(!Array.isArray(body.bars)||!body.bars.length)throw new Error("Yahoo no devolvió velas");return body}return{getBars,setEndpoint}})();
+window.TurboYahoo = (() => {
+  const endpoint = "https://turbomarket.ezefear.workers.dev";
+
+  async function getBars(symbol, interval = "1d") {
+    const url =
+      `${endpoint}/chart` +
+      `?symbol=${encodeURIComponent(symbol)}` +
+      `&interval=${encodeURIComponent(interval)}`;
+
+    const response = await fetch(url);
+
+    const body = await response.json();
+
+    if (!response.ok) {
+      throw new Error(body.error || `API HTTP ${response.status}`);
+    }
+
+    if (!Array.isArray(body.bars) || body.bars.length === 0) {
+      throw new Error("Yahoo Finance no devolvió velas");
+    }
+
+    return body;
+  }
+
+  return {
+    getBars
+  };
+})();
