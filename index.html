@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turbo Market | Bolsa de Valores</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+</head>
+<body class="dark">
+
+  <!-- Encabezado / Navegación -->
+  <header class="navbar">
+    <div class="logo">
+      <h1>🚀 Turbo Market</h1>
+    </div>
+    <div class="nav-controls">
+      <form class="search-bar" id="searchForm">
+        <input type="text" id="symbolInput" placeholder="Buscar activo (ej. AAPL, NVDA, BTCUSD)..." autocomplete="off">
+        <button type="submit">Buscar</button>
+        <button type="button" id="addFavoriteBtn" title="Añadir a favoritos">⭐ Guardar</button>
+      </form>
+
+      <!-- Selector de Tema -->
+      <div class="theme-switch-wrapper">
+        <label for="themeSelect">Tema:</label>
+        <select id="themeSelect">
+          <option value="dark">Oscuro</option>
+          <option value="light">Claro</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="main-container" id="mainContainer">
+    
+    <!-- Panel Lateral de Favoritos -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">⭐</span>
+        <h3 class="sidebar-title">Favoritos</h3>
+        <button id="toggleSidebar" class="toggle-btn" title="Contraer/Desplegar panel">☰</button>
+      </div>
+      
+      <ul class="stock-list" id="favoritesList">
+        <!-- Elementos renderizados dinámicamente -->
+      </ul>
+    </aside>
+
+    <!-- Barra divisora interactiva -->
+    <div class="resizer" id="dragbar"></div>
+
+    <!-- Área del Gráfico -->
+    <section class="chart-section">
+      <div id="tradingview_chart" class="chart-container"></div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
