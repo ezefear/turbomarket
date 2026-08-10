@@ -1,251 +1,522 @@
-// Variable con tu API Key de Finnhub
-const FINNHUB_API_KEY = "d9skqf9r01qopv47v4egd9skqf9r01qopv47v4f0";
+const DEFAULT_SYMBOL = "AAPL";
+const DEFAULT_INTERVAL = "1d";
 
-// Lista por defecto
-const defaultFavorites = [
-  { symbol: "NASDAQ:AAPL", name: "Apple", icon: "🍎" },
-  { symbol: "NASDAQ:NVDA", name: "NVIDIA", icon: "🟢" },
-  { symbol: "NASDAQ:TSLA", name: "Tesla", icon: "🚗" },
-  { symbol: "BINANCE:BTCUSDT", name: "Bitcoin", icon: "₿" },
-  { symbol: "BINANCE:ETHUSDT", name: "Ethereum", icon: "Ξ" }
-];
+let currentSymbol = DEFAULT_SYMBOL;
+let currentInterval = DEFAULT_INTERVAL;
 
-let favorites = JSON.parse(localStorage.getItem("turbo_favorites")) || defaultFavorites;
-let currentSymbol = "NASDAQ:AAPL";
-let tvWidget = null;
+let favorites = JSON.parse(
+  localStorage.getItem("turbo_favorites") || "null"
+);
 
-// --- GESTIÓN DE PRECIOS EN TIEMPO REAL ---
-
-async function fetchPrice(symbol) {
-  try {
-    // 1. Criptomonedas vía Binance API
-    if (symbol.includes("BINANCE:")) {
-      const pair = symbol.split(":")[1];
-      const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      return parseFloat(data.price).toLocaleString("en-US", { style: "currency", currency: "USD" });
+if (!Array.isArray(favorites)) {
+  favorites = [
+    {
+      symbol: "AAPL",
+      name: "Apple",
+      icon: "🍎"
+    },
+    {
+      symbol: "NVDA",
+      name: "NVIDIA",
+      icon: "🟢"
+    },
+    {
+      symbol: "TSLA",
+      name: "Tesla",
+      icon: "🚗"
+    },
+    {
+      symbol: "BTC-USD",
+      name: "Bitcoin",
+      icon: "₿"
+    },
+    {
+      symbol: "ETH-USD",
+      name: "Ethereum",
+      icon: "Ξ"
     }
-
-    // 2. Acciones vía Finnhub API
-    const cleanSymbol = symbol.includes(":") ? symbol.split(":")[1] : symbol;
-    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${cleanSymbol}&token=${FINNHUB_API_KEY}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-
-    return (data && data.c && data.c !== 0) ? `$${data.c.toFixed(2)}` : "---";
-  } catch (e) {
-    return "---";
-  }
+  ];
 }
 
-// --- GESTIÓN DE FAVORITOS ---
-
 function saveFavorites() {
-  localStorage.setItem("turbo_favorites", JSON.stringify(favorites));
+  localStorage.setItem(
+    "turbo_favorites",
+    JSON.stringify(favorites)
+  );
+}
+
+function setStatus(message, error = false) {
+  const element = document.getElementById("status");
+
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.classList.toggle("error", error);
 }
 
 function renderFavorites() {
-  const listContainer = document.getElementById("favoritesList");
-  if (!listContainer) return;
-  listContainer.innerHTML = "";
+  const container =
+    document.getElementById("favorites");
 
-  favorites.forEach((item, index) => {
-    const li = document.createElement("li");
+  if (!container) {
+    return;
+  }
 
-    li.innerHTML = `
-      <div class="stock-item-info" title="${item.name}">
-        <span class="icon">${item.icon || "📈"}</span>
-        <div class="stock-details">
-          <span class="nav-text stock-name">${item.name}</span>
-          <span class="stock-price" id="price-${index}">Cargando...</span>
-        </div>
-      </div>
-      <button class="delete-btn" title="Eliminar de favoritos">✕</button>
+  container.innerHTML = "";
+
+  favorites.forEach((favorite, index) => {
+    const item = document.createElement("li");
+
+    item.className = "favorite";
+
+    item.innerHTML = `
+      <span>${favorite.icon || "📈"}</span>
+
+      <span class="fav-text">
+        <b class="fav-name">
+          ${favorite.name || favorite.symbol}
+        </b>
+
+        <span class="fav-symbol">
+          ${favorite.symbol}
+        </span>
+
+        <span
+          class="fav-price"
+          id="favorite-price-${index}"
+        >
+          ...
+        </span>
+      </span>
+
+      <button
+        class="delete"
+        type="button"
+        title="Eliminar"
+      >
+        ×
+      </button>
     `;
 
-    // Asignación directa de eventos para cargar el gráfico al hacer clic
-    const infoContainer = li.querySelector(".stock-item-info");
-    infoContainer.addEventListener("click", () => {
-      loadSymbol(item.symbol);
-    });
+    item.querySelector(".delete").addEventListener(
+      "click",
+      event => {
+        event.stopPropagation();
 
-    const deleteBtn = li.querySelector(".delete-btn");
-    deleteBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeFavorite(index);
-    });
+        favorites.splice(index, 1);
 
-    listContainer.appendChild(li);
+        saveFavorites();
+        renderFavorites();
+      }
+    );
 
-    // Cargar precio en tiempo real mediante Finnhub / Binance
-    fetchPrice(item.symbol).then(price => {
-      const priceEl = document.getElementById(`price-${index}`);
-      if (priceEl) priceEl.textContent = price;
-    });
+    item.addEventListener(
+      "click",
+      () => {
+        loadSymbol(favorite.symbol);
+      }
+    );
+
+    container.appendChild(item);
+
+    loadFavoritePrice(
+      favorite.symbol,
+      index
+    );
   });
 }
 
-function addCurrentToFavorites() {
-  const input = document.getElementById("symbolInput");
-  const inputVal = input ? input.value.trim().toUpperCase() : "";
-  
-  // Usa lo escrito en el input o el símbolo activo actual
-  const symbolToAdd = inputVal || currentSymbol;
+async function loadFavoritePrice(
+  symbol,
+  index
+) {
+  try {
+    const data =
+      await TurboDatafeed.getBars(
+        symbol,
+        "1d"
+      );
 
-  const exists = favorites.some(fav => fav.symbol === symbolToAdd);
+    const last =
+      data.bars[data.bars.length - 1];
+
+    const element =
+      document.getElementById(
+        `favorite-price-${index}`
+      );
+
+    if (!element || !last) {
+      return;
+    }
+
+    element.textContent =
+      Number(last.close).toLocaleString(
+        "en-US",
+        {
+          maximumFractionDigits: 4
+        }
+      );
+
+  } catch (error) {
+    console.warn(
+      `No se pudo cargar ${symbol}`,
+      error
+    );
+  }
+}
+
+async function loadSymbol(symbol) {
+  const normalized =
+    String(symbol)
+      .trim()
+      .toUpperCase();
+
+  if (!normalized) {
+    setStatus(
+      "Introduce un símbolo",
+      true
+    );
+
+    return;
+  }
+
+  currentSymbol = normalized;
+
+  const input =
+    document.getElementById(
+      "symbolInput"
+    );
+
+  if (input) {
+    input.value = currentSymbol;
+  }
+
+  setStatus(
+    `Cargando ${currentSymbol}...`
+  );
+
+  try {
+    const data =
+      await TurboDatafeed.getBars(
+        currentSymbol,
+        currentInterval
+      );
+
+    if (
+      !data ||
+      !Array.isArray(data.bars) ||
+      data.bars.length === 0
+    ) {
+      throw new Error(
+        `No hay velas para ${currentSymbol}`
+      );
+    }
+
+    TurboChart.setData(
+      data.bars
+    );
+
+    const title =
+      document.getElementById(
+        "currentSymbol"
+      );
+
+    if (title) {
+      title.textContent =
+        data.symbol || currentSymbol;
+    }
+
+    const provider =
+      document.getElementById(
+        "provider"
+      );
+
+    if (provider) {
+      provider.textContent =
+        data.provider || "Yahoo Finance";
+    }
+
+    setStatus(
+      `${data.bars.length.toLocaleString(
+        "es-ES"
+      )} velas · ${
+        data.provider || "Yahoo Finance"
+      }`
+    );
+
+  } catch (error) {
+
+    console.error(
+      "TurboMarket data error:",
+      error
+    );
+
+    setStatus(
+      `Error: ${error.message}`,
+      true
+    );
+  }
+}
+
+function addFavorite() {
+  const input =
+    document.getElementById(
+      "symbolInput"
+    );
+
+  const symbol =
+    input?.value
+      ?.trim()
+      ?.toUpperCase();
+
+  if (!symbol) {
+    return;
+  }
+
+  const exists =
+    favorites.some(
+      favorite =>
+        favorite.symbol === symbol
+    );
+
   if (!exists) {
-    // Si contiene dos puntos (ej. BINANCE:BTCUSDT), extrae solo el nombre corto para la etiqueta
-    const tickerName = symbolToAdd.includes(":") ? symbolToAdd.split(":")[1] : symbolToAdd;
-    favorites.push({ symbol: symbolToAdd, name: tickerName, icon: "⭐" });
+    favorites.push({
+      symbol,
+      name: symbol,
+      icon: "⭐"
+    });
+
     saveFavorites();
     renderFavorites();
   }
+
+  loadSymbol(symbol);
 }
 
-function removeFavorite(index) {
-  favorites.splice(index, 1);
-  saveFavorites();
-  renderFavorites();
-}
+function setTheme(theme) {
+  document.body.classList.toggle(
+    "light",
+    theme === "light"
+  );
 
-// --- RENDERIZADO DEL GRÁFICO (TRADINGVIEW) ---
+  localStorage.setItem(
+    "turbo_theme",
+    theme
+  );
 
-function renderChart(symbol) {
-  currentSymbol = symbol;
-  const container = document.getElementById("tradingview_chart");
-  if (container) container.innerHTML = "";
-
-  const isLightMode = document.body.classList.contains("light");
-  const tvTheme = isLightMode ? "light" : "dark";
-
-  if (typeof TradingView !== 'undefined') {
-    tvWidget = new TradingView.widget({
-      "autosize": true,
-      "symbol": symbol,
-      "interval": "H",
-      "timezone": "Etc/UTC",
-      "theme": tvTheme,
-      "style": "1", // Velas
-      "locale": "es",
-      "toolbar_bg": isLightMode ? "#f1f3f6" : "#1b2130",
-      "enable_publishing": false,
-      "allow_symbol_change": true,
-      "container_id": "tradingview_chart",
-      "hide_side_toolbar": false // Herramientas de dibujo activas
-      
-    });
+  if (window.TurboChart) {
+    TurboChart.theme(theme);
   }
 }
 
-function loadSymbol(symbol) {
-  renderChart(symbol);
-}
+function setupSidebarResize() {
+  const sidebar =
+    document.getElementById(
+      "sidebar"
+    );
 
-function updateChart() {
-  const input = document.getElementById("symbolInput");
-  if (!input) return;
-  const inputVal = input.value.trim().toUpperCase();
-  
-  if (inputVal) {
-    // Carga directamente lo que escriba el usuario (sin forzar NASDAQ:)
-    loadSymbol(inputVal);
-  }
-}
+  const resizer =
+    document.getElementById(
+      "resizer"
+    );
 
-// --- CONFIGURACIÓN DE TEMA ---
-
-function changeTheme(theme) {
-  const body = document.body;
-  const themeSelect = document.getElementById("themeSelect");
-
-  if (theme === "light") {
-    body.classList.add("light");
-    body.classList.remove("dark");
-  } else {
-    body.classList.add("dark");
-    body.classList.remove("light");
+  if (!sidebar || !resizer) {
+    return;
   }
 
-  if (themeSelect) themeSelect.value = theme;
-  localStorage.setItem("turbo_theme", theme);
-  renderChart(currentSymbol);
-}
+  let dragging = false;
 
-function initTheme() {
-  const savedTheme = localStorage.getItem("turbo_theme") || "dark";
-  changeTheme(savedTheme);
-}
+  resizer.addEventListener(
+    "mousedown",
+    () => {
+      dragging = true;
+      document.body.style.userSelect =
+        "none";
+    }
+  );
 
-// --- INICIALIZADORES DE EVENTOS E INTERFAZ ---
-
-function initEvents() {
-  // Buscador
-  const searchForm = document.getElementById("searchForm");
-  if (searchForm) {
-    searchForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      updateChart();
-    });
-  }
-
-  // Guardar Favorito
-  const addFavBtn = document.getElementById("addFavoriteBtn");
-  if (addFavBtn) {
-    addFavBtn.addEventListener("click", addCurrentToFavorites);
-  }
-
-  // Cambiar Tema
-  const themeSelect = document.getElementById("themeSelect");
-  if (themeSelect) {
-    themeSelect.addEventListener("change", (e) => changeTheme(e.target.value));
-  }
-
-  // Colapsar Sidebar
-  const toggleBtn = document.getElementById("toggleSidebar");
-  const sidebar = document.getElementById("sidebar");
-  const dragbar = document.getElementById("dragbar");
-
-  if (toggleBtn && sidebar && dragbar) {
-    toggleBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("collapsed");
-      dragbar.style.pointerEvents = sidebar.classList.contains("collapsed") ? "none" : "auto";
-    });
-  }
-
-  // Resizer de la barra lateral
-  if (dragbar && sidebar) {
-    let isDragging = false;
-
-    dragbar.addEventListener("mousedown", () => {
-      if (sidebar.classList.contains("collapsed")) return;
-      isDragging = true;
-      dragbar.classList.add("dragging");
-      document.body.style.cursor = "col-resize";
-    });
-
-    document.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      const newWidth = e.clientX;
-      if (newWidth >= 180 && newWidth <= 500) {
-        sidebar.style.width = `${newWidth}px`;
+  document.addEventListener(
+    "mousemove",
+    event => {
+      if (!dragging) {
+        return;
       }
-    });
 
-    document.addEventListener("mouseup", () => {
-      if (isDragging) {
-        isDragging = false;
-        dragbar.classList.remove("dragging");
-        document.body.style.cursor = "default";
-      }
-    });
-  }
+      const width = Math.min(
+        500,
+        Math.max(
+          180,
+          event.clientX
+        )
+      );
+
+      sidebar.style.width =
+        `${width}px`;
+    }
+  );
+
+  document.addEventListener(
+    "mouseup",
+    () => {
+      dragging = false;
+
+      document.body.style.userSelect =
+        "";
+    }
+  );
 }
 
-// Arranque de la app al cargar el DOM
-document.addEventListener("DOMContentLoaded", () => {
-  initEvents();
-  initTheme();
-  renderFavorites();
-});
+function setupIntervals() {
+  document
+    .querySelectorAll(
+      "#intervals button"
+    )
+    .forEach(button => {
 
+      button.addEventListener(
+        "click",
+        () => {
+
+          currentInterval =
+            button.dataset.interval;
+
+          document
+            .querySelectorAll(
+              "#intervals button"
+            )
+            .forEach(
+              item =>
+                item.classList.remove(
+                  "active"
+                )
+            );
+
+          button.classList.add(
+            "active"
+          );
+
+          loadSymbol(
+            currentSymbol
+          );
+        }
+      );
+    });
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    const theme =
+      localStorage.getItem(
+        "turbo_theme"
+      ) || "dark";
+
+    const themeSelect =
+      document.getElementById(
+        "themeSelect"
+      );
+
+    if (themeSelect) {
+      themeSelect.value =
+        theme;
+
+      themeSelect.addEventListener(
+        "change",
+        event => {
+          setTheme(
+            event.target.value
+          );
+        }
+      );
+    }
+
+    setTheme(theme);
+
+    const chartContainer =
+      document.getElementById(
+        "chart"
+      );
+
+    if (!chartContainer) {
+      console.error(
+        "No existe #chart"
+      );
+
+      return;
+    }
+
+    TurboChart.create(
+      chartContainer,
+      theme
+    );
+
+    renderFavorites();
+
+    const searchForm =
+      document.getElementById(
+        "searchForm"
+      );
+
+    searchForm?.addEventListener(
+      "submit",
+      event => {
+        event.preventDefault();
+
+        const value =
+          document.getElementById(
+            "symbolInput"
+          )?.value;
+
+        loadSymbol(value);
+      }
+    );
+
+    document
+      .getElementById(
+        "favoriteBtn"
+      )
+      ?.addEventListener(
+        "click",
+        addFavorite
+      );
+
+    document
+      .getElementById(
+        "fitBtn"
+      )
+      ?.addEventListener(
+        "click",
+        () => {
+          TurboChart.fit();
+        }
+      );
+
+    document
+      .getElementById(
+        "collapseBtn"
+      )
+      ?.addEventListener(
+        "click",
+        () => {
+
+          document
+            .getElementById(
+              "sidebar"
+            )
+            ?.classList.toggle(
+              "collapsed"
+            );
+        }
+      );
+
+    setupIntervals();
+    setupSidebarResize();
+
+    loadSymbol(
+      DEFAULT_SYMBOL
+    );
+  }
+);

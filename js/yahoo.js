@@ -1,24 +1,31 @@
 window.TurboYahoo = (() => {
-  const endpoint = "https://turbomarket.ezefear.workers.dev";
+  const ENDPOINT = "https://turbomarket.ezefear.workers.dev";
 
   async function getBars(symbol, interval = "1d") {
-    const url =
-      `${endpoint}/chart` +
-      `?symbol=${encodeURIComponent(symbol)}` +
-      `&interval=${encodeURIComponent(interval)}`;
+    const url = new URL(`${ENDPOINT}/chart`);
 
-    const response = await fetch(url);
-    const body = await response.json();
+    url.searchParams.set("symbol", symbol);
+    url.searchParams.set("interval", interval);
+
+    const response = await fetch(url.toString());
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("El Worker devolvió una respuesta inválida");
+    }
 
     if (!response.ok) {
-      throw new Error(body.error || `API HTTP ${response.status}`);
+      throw new Error(data.error || `Yahoo API HTTP ${response.status}`);
     }
 
-    if (!Array.isArray(body.bars) || body.bars.length === 0) {
-      throw new Error("Yahoo Finance no devolvió velas");
+    if (!Array.isArray(data.bars) || data.bars.length === 0) {
+      throw new Error(`Yahoo no devolvió datos para ${symbol}`);
     }
 
-    return body;
+    return data;
   }
 
   return {
