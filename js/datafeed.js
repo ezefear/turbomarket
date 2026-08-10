@@ -1,0 +1,1 @@
+window.TurboDatafeed=(()=>{function isBinance(s){return String(s).toUpperCase().startsWith("BINANCE:")||/^(BTC|ETH|SOL)(USDT|USD)$/.test(String(s).toUpperCase())}async function getBars(symbol,interval){return isBinance(symbol)?TurboBinance.getBars(symbol,interval):TurboYahoo.getBars(symbol,interval)}return{getBars}})();
