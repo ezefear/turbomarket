@@ -1,64 +1,60 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Turbo Market | Bolsa de Valores</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TurboMarket</title>
   <link rel="stylesheet" href="style.css">
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
-<body class="dark">
-
-  <!-- Encabezado / Navegación -->
-  <header class="navbar">
-    <div class="logo">
-      <h1>🚀 Turbo Market</h1>
-    </div>
-    <div class="nav-controls">
-      <form class="search-bar" id="searchForm">
-        <input type="text" id="symbolInput" placeholder="Buscar activo (ej. AAPL, NVDA, BTCUSD)..." autocomplete="off">
-        <button type="submit">Buscar</button>
-        <button type="button" id="addFavoriteBtn" title="Añadir a favoritos">⭐ Guardar</button>
-      </form>
-
-      <!-- Selector de Tema -->
-      <div class="theme-switch-wrapper">
-        <label for="themeSelect">Tema:</label>
-        <select id="themeSelect">
-          <option value="dark">Oscuro</option>
-          <option value="light">Claro</option>
-        </select>
-      </div>
-    </div>
+<body>
+  <header class="topbar">
+    <div class="brand">🚀 TurboMarket</div>
+    <form id="searchForm" class="search">
+      <input id="symbolInput" placeholder="AAPL, NVDA, BTC-USD..." autocomplete="off">
+      <button>Buscar</button>
+      <button type="button" id="favoriteBtn">★</button>
+    </form>
+    <select id="themeSelect">
+      <option value="dark">Oscuro</option>
+      <option value="light">Claro</option>
+    </select>
   </header>
 
-  <!-- Contenido Principal -->
-  <main class="main-container" id="mainContainer">
-    
-    <!-- Panel Lateral de Favoritos -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">⭐</span>
-        <h3 class="sidebar-title">Favoritos</h3>
-        <button id="toggleSidebar" class="toggle-btn" title="Contraer/Desplegar panel">☰</button>
+  <main>
+    <aside id="sidebar">
+      <div class="side-title">
+        <strong>Favoritos</strong>
+        <button id="collapseBtn">☰</button>
       </div>
-      
-      <ul class="stock-list" id="favoritesList">
-        <!-- Elementos renderizados dinámicamente -->
-      </ul>
+      <ul id="favorites"></ul>
     </aside>
 
-    <!-- Barra divisora interactiva -->
-    <div class="resizer" id="dragbar"></div>
+    <div id="resizer"></div>
 
-    <!-- Área del Gráfico -->
-    <section class="chart-section">
-      <div id="tradingview_chart" class="chart-container"></div>
+    <section class="workspace">
+      <div class="toolbar">
+        <div>
+          <strong id="currentSymbol">AAPL</strong>
+          <small id="provider">Yahoo Finance</small>
+        </div>
+        <div id="intervals">
+          <button data-interval="1d" class="active">1D</button>
+          <button data-interval="1wk">1W</button>
+          <button data-interval="1mo">1M</button>
+        </div>
+        <button id="fitBtn" class="secondary">Ajustar</button>
+      </div>
+      <div id="status">Iniciando...</div>
+      <div id="chart"></div>
     </section>
-
   </main>
 
-  <script src="app.js"></script>
-
+  <script src="js/yahoo.js"></script>
+  <script src="js/binance.js"></script>
+  <script src="js/datafeed.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
