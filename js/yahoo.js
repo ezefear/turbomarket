@@ -8,7 +8,6 @@ window.TurboYahoo = (() => {
       `&interval=${encodeURIComponent(interval)}`;
 
     const response = await fetch(url);
-
     const body = await response.json();
 
     if (!response.ok) {
