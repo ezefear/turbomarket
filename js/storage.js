@@ -1,1 +1,0 @@
-window.TurboStorage=(()=>{const key=s=>`turbo_drawings_${String(s).toUpperCase()}`;function get(symbol){try{return JSON.parse(localStorage.getItem(key(symbol))||"[]")}catch{return[]}}function set(symbol,data){localStorage.setItem(key(symbol),JSON.stringify(data||[]))}return{get,set}})();
