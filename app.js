@@ -124,7 +124,7 @@ function renderChart(symbol) {
       "autosize": true,
       "symbol": symbol,
       "interval": "H",
-      "timezone": "Etc/UTC",
+      "timezone": "America/New_York",
       "theme": tvTheme,
       "style": "1", // Velas
       "locale": "es",
@@ -132,8 +132,11 @@ function renderChart(symbol) {
       "enable_publishing": false,
       "allow_symbol_change": true,
       "container_id": "tradingview_chart",
-      "hide_side_toolbar": false // Herramientas de dibujo activas
-      
+      "hide_side_toolbar": false, // Herramientas de dibujo activas
+      // 🟢 Carga por defecto el indicador Moving Average Ribbon:
+      "studies": [
+        "MA Ribbon@tv-basicstudies"
+      ]
     });
   }
 }
