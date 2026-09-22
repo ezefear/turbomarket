@@ -135,7 +135,7 @@ function renderChart(symbol) {
       "hide_side_toolbar": false, // Herramientas de dibujo activas
       // 🟢 Carga por defecto el indicador Moving Average Ribbon:
       "studies": [
-        "MA Ribbon@tv-basicstudies"
+        "Moving Average Ribbon@tv-basicstudies"
       ]
     });
   }
