@@ -133,10 +133,18 @@ function renderChart(symbol) {
       "allow_symbol_change": true,
       "container_id": "tradingview_chart",
       "hide_side_toolbar": false, // Herramientas de dibujo activas
-      // 🟢 Carga por defecto el indicador Moving Average Ribbon:
-      "studies": [
-        "Moving Average Ribbon@tv-basicstudies"
-      ]
+    "studies": [
+    { "id": "MASimple@tv-basicstudies", "inputs": { "length": 20, } },
+    { "id": "MASimple@tv-basicstudies", "inputs": { "length": 50 } },
+    { "id": "MASimple@tv-basicstudies", "inputs": { "length": 100 } },
+    { "id": "MASimple@tv-basicstudies", "inputs": { "length": 200 } }
+  ],
+
+  "studies_overrides": {
+    "moving average.ma.color": "#FFEB3B",     // Color MA 1
+    "moving average.ma.linewidth": 2
+      }
+
     });
   }
 }
